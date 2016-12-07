@@ -25,7 +25,7 @@ class RankingsQueue(object):
 			pass
 
 	def GetPlayers(self):
-		return self.league
+		return self.players
 
 
 class League(object):
@@ -113,6 +113,6 @@ def _():
 				player.CalculateProjectedPoints()
 
 	rankingsQueue = RankingsQueue(league)
-	# rankingsQueue.SortPlayers()
-	# rankingsQueue.GetRankings()
+	rankingsQueue.SortPlayers()
+	rankingsQueue.GetRankings()
 	return rankingsQueue.GetPlayers() 
