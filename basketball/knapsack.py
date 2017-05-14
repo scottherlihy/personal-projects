@@ -1,5 +1,13 @@
+import math
+import matplotlib.pyplot as plt
+import random
+
+from operator import add
+from collections import namedtuple
+
 from GetPlayers import _
 players = _()
+
 
 AVAILABLE_PGS = [player for player in players if 'PG' in player.position]
 AVAILABLE_SGS = [player for player in players if 'SG' in player.position]
@@ -9,6 +17,11 @@ AVAILABLE_CS = [player for player in players if 'C' in player.position]
 AVAILABLE_GS = [player for player in players if 'PG' in player.position or 'SG' in player.position]
 AVAILABLE_FS = [player for player in players if 'PF' in player.position or 'SF' in player.position]
 AVAILABLE_UTILITIES = [player for player in players]
+
+
+TEAM_SIZE = 8
+POSITIONS = ['PG','SG','PF','SF','C','G','F','U']
+Team = namedtuple('Team', [position for position in POSITIONS])
 
 # # This csv contains our predictions and salaries for each player. 
 # # We parse each row of the csv and convert it into a Player object.
@@ -25,14 +38,6 @@ AVAILABLE_UTILITIES = [player for player in players]
 #         player = Player(position, name, salary, points, value)
 #         players.append(player)
 
-import random
-import math
-from operator import add
-import matplotlib.pyplot as plt
-
-TEAM_SIZE = 8
-POSITIONS = ['pg','sg','pf','sf','c','g','f','u']
-
 class PopulationInitializer(object):
     def __init__(self):
         pass
@@ -43,45 +48,27 @@ class PopulationInitializer(object):
         @returns a list of dictionaries of the string representation of position to player
         """
         z = [self.CreateRandomTeam() for i in range(count)]
-        print z[0]
+        # print z[0]
         return z
 
     def CreateRandomTeam(self):
         """
         @returns a dictionary of the string representation of position to player
         """
-        team = {
-        'pg' : random.sample(AVAILABLE_PGS,1),
-        'sg' : random.sample(AVAILABLE_SGS,1),
-        'pf' : random.sample(AVAILABLE_PFS,1),
-        'sf' : random.sample(AVAILABLE_SFS,1),
-        'c' : random.sample(AVAILABLE_CS,1),
-        'g' : random.sample(AVAILABLE_GS,1),
-        'f' : random.sample(AVAILABLE_FS,1),
-        'u' : random.sample(AVAILABLE_UTILITIES,1)
-        }
-        
+        team = Team(random.sample(AVAILABLE_PGS,1),
+                    random.sample(AVAILABLE_SGS,1),
+                    random.sample(AVAILABLE_PFS,1),
+                    random.sample(AVAILABLE_SFS,1),
+                    random.sample(AVAILABLE_CS,1),
+                    random.sample(AVAILABLE_GS,1),
+                    random.sample(AVAILABLE_FS,1),
+                    random.sample(AVAILABLE_UTILITIES,1))
+
         while True:
-            team, noDuplicates = self.CheckNoDuplicates(team, team['g'][0], team['f'][0], team['u'][0])
+            team, noDuplicates = self.CheckNoDuplicates(team)
             if noDuplicates == True:
                 break
         return team
-
-    def _alreadyOnTeam(self, player, team):
-        for position in team:
-            return position[0] == player
-
-    def CheckNoDuplicates(self, team, guard, forward, utility):
-        if self._alreadyOnTeam(utility, team):
-            team['u'] = random.sample(utilities,1)
-            return team, False
-        elif self._alreadyOnTeam(guard, team):
-            team['g'] = random.sample(gs,1)
-            return team, False
-        elif self._alreadyOnTeam(forward, team):
-            team['f'] = random.sample(fs,1)
-            return team, False
-        return team, True
 
 
 class TeamInterpreter(object):
@@ -89,33 +76,20 @@ class TeamInterpreter(object):
         pass
 
     def GetTeamPointTotal(self, team):
-        total_points = 0
-        for pos, players in team.iteritems():
-            for player in players:
-                total_points += player.points
-        return total_points
+        #replace
 
     def GetTeamSalary(self, team):
-        total_salary = 0
-        for pos, players in team.iteritems():
-            for player in players:
-                total_salary += player.salary
-        return total_salary
-
+        #replace
 
 class Darwin(object):
-    def __init__(self, writer=None, initializer=None, interpreter=None):
+    def __init__(self, writer=None, initializer=None):
         self.consoleWriter = ConsoleWriter()
         self.initializer = PopulationInitializer()
-        self.interpreter = TeamInterpreter()
 
-    def Fitness(self, team):
-        points = self.interpreter.GetTeamPointTotal(team)
-        salary = self.interpreter.GetTeamSalary(team)
-        values = team.values()
-        if salary > 50000:  #should be unnecessary if create random team is guaranteed to return a valid team
+    def Fitness(self, team):  # look how much it will all get clean!!!
+        if team.GetTeamSalary() > 50000:  #should be unnecessary if create random team is guaranteed to return a valid team
             return 0
-        return points
+        return team.GetTeamPointTotal()
 
     def Grade(self, pop):
         """ Find average fitness for a population.
@@ -123,16 +97,16 @@ class Darwin(object):
         summed = reduce(add, (self.Fitness(team) for team in pop))
         return summed / (len(pop) * 1.0)
 
-    def _listToTeam(self, players):
-        return {'pg' : [players[0]],
-                'sg' : [players[1]],
-                'pf' : [players[2]],
-                'sf' : [players[3]],
-                'c' : [players[4]],
-                'g' : [players[5]],
-                'f' : [players[6]],
-                'u' : [players[7]]
-                }          
+    # def _listToTeam(self, players):
+    #     return {[players[0]],
+    #             [players[1]],
+    #             [players[2]],
+    #             [players[3]],
+    #            [players[4]],
+    #            [players[5]],
+    #            [players[6]],
+    #            [players[7]]
+    #             }          
 
     def _getPlayersAtPositions(self, parent):
         """
@@ -166,8 +140,14 @@ class Darwin(object):
 
         return[child1, child2] 
 
+
+
+
+
+# NEED MAPPING FROM POSITION TO AVAILBLE PLAYERS AT THAT POSITION
+
     def Mutate(self, team):      
-        random_pos = random.choice(AVAILABLE_POSITIONS)
+        random_pos = random.choice(POSITIONS)
         if random_pos == 'pg':
             team['pg'][0] = random.choice(AVAILABLE_PGS)
         if random_pos == 'sg':
@@ -233,8 +213,8 @@ class Darwin(object):
             #             print "~:{}".format(self.interpreter.GetTeamSalary(team))
             p = self.Evolve(p)
             fitness_history.append(self.Grade(p))
-            valid_teams = [team for team in p if self.interpreter.GetTeamSalary(team) <= 50000]
-            valid_teams = sorted(valid_teams, key=self.interpreter.GetTeamPointTotal, reverse=True)
+            valid_teams = [team for team in p if team.GetTeamSalary() <= 50000]
+            valid_teams = sorted(valid_teams, key=team.GetTeamPointTotal, reverse=True)
             # for team in valid_teams:
             #     if self.interpreter.GetTeamSalary(team) > 50000:
             #             print self.interpreter.GetTeamSalary(team)
@@ -246,37 +226,19 @@ class Darwin(object):
         for datum in fitness_history:
             history.append(datum)
 
-        best_teams = sorted(best_teams, key=self.interpreter.GetTeamSalary, reverse=True)
+        best_teams = sorted(best_teams, key=team.GetTeamSalary, reverse=True)
         print 'Number of valid teams: {}'.format(str(len(valid_teams)))
         choice = best_teams[0]
         # self.consoleWriter.ShowOutput(choice)
         return choice
 
 class ConsoleWriter(object):
-    def __init__(self):
-        self.interpreter = TeamInterpreter()
-
     def ShowOutput(self, team):
         print '\n' + '---------------------------------'
-
-        self.printTeam(team)
-        print self.interpreter.GetTeamSalary(team)
-        print self.interpreter.GetTeamPointTotal(team)
+        print team
+        print team.GetTeamSalary()
+        print team.GetTeamPointTotal
         print '---------------------------------' + '\n'
-
-    def printTeam(self, team):
-        self.printPlayer(team['pg'][0])
-        self.printPlayer(team['sg'][0])
-        self.printPlayer(team['pf'][0])
-        self.printPlayer(team['sf'][0])
-        self.printPlayer(team['g'][0])
-        self.printPlayer(team['f'][0])
-        self.printPlayer(team['c'][0])
-        self.printPlayer(team['u'][0])
-
-    def printPlayer(self, p):
-        print "Name:{}, Points:{}, Salary:{}, Position:{}, Value:{}".format(p.name, p.points, p.salary, p.position, p.value)
-
 
 
 if __name__ == '__main__':
@@ -286,8 +248,7 @@ if __name__ == '__main__':
         the_best_teams.append(algo.EvolutionLoop())
 
     consoleWriter = ConsoleWriter()
-    interpreter = TeamInterpreter()
-    best_team = sorted(the_best_teams, key=interpreter.GetTeamSalary, reverse=True)[0]
+    best_team = sorted(the_best_teams, key=BasketballTeam.GetTeamSalary, reverse=True)[0]
     consoleWriter.ShowOutput(best_team)
 
 
